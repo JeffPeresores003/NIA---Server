@@ -1,0 +1,14 @@
+{
+    "baseurl": "http://localhost:5001/",
+    "Connection" : {
+        "dbConfig": {
+            "driver": "mysql",
+            "user": "bisublar_nias",
+            "database": "bisublar_nias",
+            "password": "BISUBlarNIAs2!",
+            "host": "192.185.48.158",
+            "port": "3306",
+            "timezone": "+08:00"
+        }
+    }
+}
