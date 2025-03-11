@@ -1,44 +1,49 @@
-const express = require("express");
-const mysql = require("mysql2");
-const jwt = require("jsonwebtoken");
-require("dotenv").config();
+// auth.routes.js
+const express = require('express');
+const bcrypt = require('bcryptjs');
+const pool = require("../database/config"); 
+const router = express.Router();
+const security = require('../database/security');
+//const { parse } = require("dotenv/types");
+const path = require('path');
+const baseUrl = require('../database/config.json');
+const e = require("express");
 
-const app = express();
-app.use(express.json());
-
-// Database connection
-const db = mysql.createPool({
-    host: "192.185.48.158",
-    user: "bisublar_nias",
-    password: "BISUBlarrNIAs2!",
-    database: "bisublar_nias",
-    connectionLimit: 10
-});
-
-// User Registration
-app.post("/register", async (req, res) => {
-    const { username, password } = req.body;
+// Register Route
+router.post('/register', async (req, res) => {
+    const { email, password, username, role } = req.body;
+    if (!email || !password || !username || !role) {
+        return res.status(400).json({ message: 'All fields are required' });
+    }
     const hashedPassword = await bcrypt.hash(password, 10);
-    
-    db.query("INSERT INTO users (username, password) VALUES (?, ?)", [username, hashedPassword], (err, result) => {
-        if (err) return res.status(500).json({ error: err.message });
-        res.json({ message: "User registered successfully" });
-    });
+    try {
+        await pool.query('CALL sp_user_register(?, ?, ?, ?)', [email, hashedPassword, username, role]);
+        res.json({ message: 'User registered successfully' });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
 });
 
-// User Login
-app.post("/login", (req, res) => {
-    const { username, password } = req.body;
-    
-    db.query("SELECT * FROM users WHERE username = ?", [username], async (err, results) => {
-        if (err || results.length === 0) return res.status(401).json({ error: "Invalid credentials" });
-        
-        const isMatch = await bcrypt.compare(password, results[0].password);
-        if (!isMatch) return res.status(401).json({ error: "Invalid credentials" });
-        
-        const token = jwt.sign({ id: results[0].id }, "secret", { expiresIn: "1h" });
-        res.json({ token });
-    });
+// Login Route
+router.post('/login', async (req, res) => {
+    const { email, password } = req.body;
+    if (!email || !password) {
+        return res.status(400).json({ message: 'Email and password are required' });
+    }
+    try {
+        const [rows] = await pool.query('CALL sp_user_login(?)', [email]);
+        if (rows.length === 0) {
+            return res.status(401).json({ message: 'Invalid credentials' });
+        }
+        const user = rows[0];
+        const match = await bcrypt.compare(password, user.password);
+        if (!match) {
+            return res.status(401).json({ message: 'Invalid credentials' });
+        }
+        res.json({ message: 'User logged in successfully', userId: user.id });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
 });
 
-app.listen(3000, () => console.log("Server running on port 3000"));
+module.exports = router;

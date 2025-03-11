@@ -1,35 +1,50 @@
 const express = require("express");
-const mysql = require("mysql2");
-const jwt = require("jsonwebtoken");
-require("dotenv").config();
+const router = express.Router();
+//const cors = require("cors");
+const db = require("../database/config");
+//const csrf = require('csurf');
+//const config = require('../database/config.json');
 
-const app = express();
-app.use(express.json());
+//const security = require('../database/security');
 
-// Database connection
-const db = mysql.createPool({
-    host: "192.185.48.158",
-    user: "bisublar_nias",
-    password: "BISUBlarrNIAs2!",
-    database: "bisublar_nias",
-    connectionLimit: 10
-});
-// Insert IA Profile
-app.post("/insert", (req, res) => {
-    const { name, position, contact } = req.body;
-    db.query("CALL InsertIAProfile(?, ?, ?)", [name, position, contact], (err, result) => {
-        if (err) return res.status(500).json({ error: err.message });
-        res.json({ message: "IA profile added successfully" });
+
+// Get All IA Profiles
+router.get('/get_profile', (req, res) => {
+    db.sequelize.query('CALL sp_iaProfile_getAll()', {
+        type: db.sequelize.QueryTypes.SELECT
+    }).then((data) => {
+        const data_ret = db.MultiQueryResult(data).result0;
+        if (data_ret) {
+            res.send(data_ret);
+        } else {
+            res.send(`no_data`);
+        }
+    }).catch(err => {
+        res.send(`Error: ${err}`);
     });
+});
+
+// Insert IA Profile
+router.post('/insert', async (req, res) => {
+    const data = Object.values(req.body);
+    try {
+        await pool.query('CALL sp_iaProfile_insert(?)', [data]);
+        res.json({ message: 'IA Profile inserted successfully' });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
 });
 
 // Update IA Profile
-app.put("/update", (req, res) => {
-    const { id, name, position, contact } = req.body;
-    db.query("CALL UpdateIAProfile(?, ?, ?, ?)", [id, name, position, contact], (err, result) => {
-        if (err) return res.status(500).json({ error: err.message });
-        res.json({ message: "IA profile updated successfully" });
-    });
+router.put('/update/:cis_id', async (req, res) => {
+    const { cis_id } = req.params;
+    const data = Object.values(req.body);
+    try {
+        await pool.query('CALL sp_iaProfile_update(?, ?)', [cis_id, ...data]);
+        res.json({ message: 'IA Profile updated successfully' });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
 });
 
-app.listen(3000, () => console.log("Server running on port 3000"));
+module.exports = router;

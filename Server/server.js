@@ -21,19 +21,18 @@ app.use(express.static(path.join(__dirname, 'public')));
 // app.use(session({ secret: process.env.PUBLICVAPIDKEY, resave: false, saveUninitialized: false }))
 
 const Template = require('./routes/template.routes');
-const auth = require('./routes/auth.routes'); //mao ni akong gi add
-const iaProfile = require('./routes/iaProfile.routes');
+const iaProfile = require('./routes/iaProfile.routes'); //mao ni akong gi add
 
 // File Upload API
 const fileUpload = require('express-fileupload');
+const router = require("./routes/iaProfile.routes");
 app.use(fileUpload());
 app.use(express.static('public'));
 // Email Sender
 
 
 app.use("/template", Template);
-app.use("/auth", auth); //mao ni akong gi add
-app.use("/iaProfile", iaProfile);
+app.use("/iaProfile", router); //mao ni akong gi add
 
 app.get('/', function (req, res) {
     res.statusCode = 200;
